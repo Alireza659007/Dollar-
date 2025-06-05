@@ -1,0 +1,186 @@
+<!DOCTYPE html><html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سایت دلاری</title>
+  <style>
+    body {
+      font-family: 'Tahoma';
+      background: linear-gradient(to bottom right, #228B22, #800080);
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+    section {
+      background: rgba(0, 0, 0, 0.6);
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      width: 90%;
+      border: none;
+      border-radius: 5px;
+    }
+    button {
+      background: #32CD32;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    table {
+      width: 100%;
+      background: rgba(255,255,255,0.1);
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 8px;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <section>
+    <h2>ثبت‌نام</h2>
+    <input id="regUsername" placeholder="نام کاربری">
+    <input id="regPassword" placeholder="رمز عبور" type="password">
+    <button onclick="register()">ثبت‌نام</button>
+    <p id="regMsg"></p>
+  </section>  <section>
+    <h2>ورود</h2>
+    <input id="loginUsername" placeholder="نام کاربری">
+    <input id="loginPassword" placeholder="رمز عبور" type="password">
+    <button onclick="login()">ورود</button>
+    <p id="loginMsg"></p>
+  </section>  <section id="userPanel" style="display:none">
+    <h3>خوش آمدید، <span id="currentUser"></span></h3>
+    <p>موجودی: <span id="balance"></span>$</p>
+    <input id="codeInput" placeholder="کد را وارد کنید">
+    <button onclick="redeemCode()">دریافت دلار</button>
+    <p id="redeemMsg"></p>
+    <hr>
+    <h4>انتقال دلار</h4>
+    <input id="toUser" placeholder="کاربر مقصد">
+    <input id="amount" type="number" placeholder="مقدار">
+    <button onclick="transferDollar()">انتقال</button>
+    <p id="transferMsg"></p>
+    <button onclick="logout()">خروج</button>
+  </section>  <section>
+    <h2>پنل مدیریت</h2>
+    <input id="adminPass" type="password" placeholder="رمز مدیریت">
+    <button onclick="loginAdmin()">ورود مدیریت</button>
+    <section id="adminPanel" style="display:none">
+      <h3>ساخت کد</h3>
+      <input id="newCodeAmount" type="number" placeholder="مقدار دلار">
+      <button onclick="createCode()">ایجاد کد</button>
+      <p id="codeResult"></p>
+      <h3>حذف کاربر</h3>
+      <input id="deleteUserInput" placeholder="نام کاربری">
+      <button onclick="deleteUser()">حذف کاربر</button>
+      <p id="deleteMsg"></p>
+    </section>
+  </section>  <section>
+    <h2>جدول برترین کاربران</h2>
+    <table>
+      <thead>
+        <tr><th>کاربر</th><th>موجودی</th></tr>
+      </thead>
+      <tbody id="leaderboard"></tbody>
+    </table>
+  </section>  <script>
+    const ADMIN_PASSWORD = "admin123";
+    let users = JSON.parse(localStorage.getItem("users") || "{}");
+    let codes = JSON.parse(localStorage.getItem("codes") || "{}");
+    let currentUser = null;
+
+    function save() {
+      localStorage.setItem("users", JSON.stringify(users));
+      localStorage.setItem("codes", JSON.stringify(codes));
+    }
+
+    function register() {
+      const u = regUsername.value.trim();
+      const p = regPassword.value;
+      if (!u || !p || users[u]) return regMsg.innerText = "خطا: تکراری یا خالی";
+      users[u] = { password: p, balance: 0 };
+      save();
+      regMsg.innerText = "ثبت‌نام موفق";
+    }
+
+    function login() {
+      const u = loginUsername.value.trim();
+      const p = loginPassword.value;
+      if (users[u]?.password === p) {
+        currentUser = u;
+        document.getElementById("currentUser").innerText = u;
+        document.getElementById("balance").innerText = users[u].balance;
+        userPanel.style.display = "block";
+        loginMsg.innerText = "";
+        updateLeaderboard();
+      } else loginMsg.innerText = "نام کاربری یا رمز اشتباه است";
+    }
+
+    function logout() {
+      currentUser = null;
+      userPanel.style.display = "none";
+    }
+
+    function redeemCode() {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!codes[code] || codes[code].used) return redeemMsg.innerText = "کد نامعتبر است";
+      users[currentUser].balance += codes[code].amount;
+      codes[code].used = true;
+      save();
+      redeemMsg.innerText = `${codes[code].amount}$ اضافه شد.`;
+      document.getElementById("balance").innerText = users[currentUser].balance;
+      updateLeaderboard();
+    }
+
+    function transferDollar() {
+      const to = toUser.value.trim();
+      const amt = parseInt(amount.value);
+      if (!users[to] || users[currentUser].balance < amt || amt <= 0) return transferMsg.innerText = "خطا در انتقال";
+      users[currentUser].balance -= amt;
+      users[to].balance += amt;
+      save();
+      transferMsg.innerText = `به ${to} مقدار ${amt}$ ارسال شد.`;
+      document.getElementById("balance").innerText = users[currentUser].balance;
+      updateLeaderboard();
+    }
+
+    function loginAdmin() {
+      if (adminPass.value === ADMIN_PASSWORD) adminPanel.style.display = "block";
+    }
+
+    function createCode() {
+      const amt = parseInt(newCodeAmount.value);
+      if (!amt || amt <= 0) return codeResult.innerText = "مقدار معتبر وارد کن";
+      const code = Math.random().toString(36).substring(2,10).toUpperCase();
+      codes[code] = { amount: amt, used: false };
+      save();
+      codeResult.innerText = `کد: ${code} (${amt}$)`;
+    }
+
+    function deleteUser() {
+      const user = deleteUserInput.value.trim();
+      if (users[user]) {
+        delete users[user];
+        save();
+        deleteMsg.innerText = `کاربر ${user} حذف شد`;
+        updateLeaderboard();
+      } else deleteMsg.innerText = "کاربر یافت نشد";
+    }
+
+    function updateLeaderboard() {
+      const tbody = document.getElementById("leaderboard");
+      tbody.innerHTML = "";
+      Object.entries(users).sort((a,b)=>b[1].balance - a[1].balance).slice(0,10).forEach(([u, d]) => {
+        tbody.innerHTML += `<tr><td>${u}</td><td>${d.balance}$</td></tr>`;
+      });
+    }
+  </script></body>
+</html>
