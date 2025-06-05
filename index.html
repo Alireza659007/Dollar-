@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سایت کسب درآمد با دلار</title>
+  <style>
+    body {
+      font-family: 'Vazir', Tahoma, sans-serif;
+      background: linear-gradient(135deg, #4b6cb7, #6a5acd);
+      color: #f0f0f5;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hidden { display: none; }
+    section {
+      background: rgba(30, 30, 60, 0.85);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 10px;
+      width: 320px;
+      box-shadow: 0 8px 15px rgba(50, 50, 100, 0.7);
+    }
+    input, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+      background: #2a2e5e;
+      color: #ddd;
+    }
+    input::placeholder {
+      color: #aaa;
+    }
+    button {
+      background: #6a5acd;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #5848c2;
+    }
+    h2, h3 {
+      margin-bottom: 12px;
+      text-align: center;
+      text-shadow: 1px 1px 3px #222;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background: #5848c2;
+      color: #fff;
+      text-shadow: 1px 1px 3px #222;
+    }
+    tbody tr:hover {
+      background: rgba(106, 90, 205, 0.2);
+    }
+    footer {
+      margin-top: auto;
+      padding: 15px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+      background: rgba(30, 30, 60, 0.7);
+      border-radius: 8px;
+      font-size: 14px;
+      color: #ccc;
+      font-style: italic;
+      box-shadow: 0 0 10px #6a5acd;
+    }
+    p {
+      min-height: 24px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ثبت نام -->
+  <section id="registerSection">
+    <h2>ثبت نام</h2>
+    <input id="regUsername" placeholder="نام کاربری" />
+    <input id="regPassword" type="password" placeholder="رمز عبور" />
+    <button onclick="register()">ثبت نام</button>
+    <p id="regMsg"></p>
+  </section>
+
+  <!-- ورود -->
+  <section id="loginSection">
+    <h2>ورود</h2>
+    <input id="loginUsername" placeholder="نام کاربری" />
+    <input id="loginPassword" type="password" placeholder="رمز عبور" />
+    <button onclick="login()">ورود</button>
+    <p id="loginMsg"></p>
+  </section>
+
+  <!-- پنل کاربری -->
+  <section id="userPanel" class="hidden">
+    <h3>خوش آمدید، <span id="currentUserName"></span></h3>
+    <p>موجودی شما: <span id="balanceDisplay"></span></p>
+
+    <div>
+      <input id="userCode" placeholder="کد دلار خود را وارد کنید" />
+      <button onclick="redeemCode()">دریافت دلار</button>
+      <p id="redeemMsg"></p>
+    </div>
+
+    <div>
+      <input id="transferTo" placeholder="نام کاربری مقصد" />
+      <input id="transferAmount" type="number" placeholder="مقدار دلار" />
+      <button onclick="transferDollar()">انتقال دلار</button>
+      <p id="transferMsg"></p>
+    </div>
+
+    <button onclick="logout()">خروج</button>
+  </section>
+
+  <!-- پنل مدیریت -->
+  <section id="adminLogin">
+    <h2>ورود پنل مدیریت</h2>
+    <input id="adminPass" type="password" placeholder="رمز مدیر" />
+    <button onclick="loginAdmin()">ورود</button>
+    <p id="adminMsg"></p>
+  </section>
+
+  <section id="adminPanel" class="hidden">
+    <h2>پنل مدیریت</h2>
+
+    <div>
+      <input id="amountInput" type="number" placeholder="مقدار دلار کد" />
+      <button onclick="createCode()">ساخت کد جدید</button>
+      <p id="newCodeInfo"></p>
+    </div>
+
+    <div>
+      <h3>حذف کاربر</h3>
+      <input id="deleteUserInput" placeholder="نام کاربری برای حذف" />
+      <button onclick="deleteUser()">حذف کن</button>
+      <p id="deleteUserMsg"></p>
+    </div>
+
+    <button onclick="logoutAdmin()">خروج از مدیریت</button>
+  </section>
+
+  <!-- جدول ۱۰ نفر برتر -->
+  <section>
+    <h3>۱۰ نفر برتر</h3>
+    <table id="scoreTable">
+      <thead>
+        <tr><th>رتبه</th><th>نام کاربری</th><th>موجودی ($)</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <footer>
+    <p id="footerMessage">رقابت کنید و می‌توانید از این سایت کسب درآمد کنید و قیمت فعلی هر 1 دلار در این سایت 2000 تومان است.</p>
+  </footer>
+
+<script>
+  const ADMIN_PASSWORD = "12345admin";
+
+  let users = JSON.parse(localStorage.getItem("users") || "{}");
+  let codes = JSON.parse(localStorage.getItem("codes") || "{}");
+  let currentUser = null;
+
+  function saveData() {
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("codes", JSON.stringify(codes));
+  }
+
+  function register() {
+    const u = document.getElementById("regUsername").value.trim();
+    const p = document.getElementById("regPassword").value;
+    const msg = document.getElementById("regMsg");
+    msg.style.color = "#ff6f61";
+    msg.innerText = "";
+
+    if (!u || !p) {
+      msg.innerText = "نام کاربری و رمز را وارد کنید";
+      return;
+    }
+    if (users[u]) {
+      msg.innerText = "نام کاربری قبلا ثبت شده است";
+      return;
+    }
+    users[u] = { password: p, balance: 0 };
+    saveData();
+    msg.style.color = "#7fff7f";
+    msg.innerText = "ثبت نام با موفقیت انجام شد";
+    document.getElementById("regUsername").value = "";
+    document.getElementById("regPassword").value = "";
+  }
+
+  function login() {
+    const u = document.getElementById("loginUsername").value.trim();
+    const p = document.getElementById("loginPassword").value;
+    const msg = document.getElementById("loginMsg");
+    msg.style.color = "#ff6f61";
+    msg.innerText = "";
+
+    if (!u || !p) {
+      msg.innerText = "نام کاربری و رمز را وارد کنید";
+      return;
+    }
+    if (!users[u] || users[u].password !== p) {
+      msg.innerText = "نام کاربری یا رمز اشتباه است";
+      return;
+    }
+    currentUser = u;
+    document.getElementById("loginUsername").value = "";
+    document.getElementById("loginPassword").value = "";
+    msg.innerText = "";
+    showUserPanel();
+  }
+
+  function showUserPanel() {
+    document.getElementById("userPanel").classList.remove("hidden");
+    document.getElementById("registerSection").classList.add("hidden");
+    document.getElementById("loginSection").classList.add("hidden");
+    document.getElementById("adminLogin").classList.add("hidden");
+    document.getElementById("adminPanel").classList.add("hidden");
+
+    document.getElementById("currentUserName").innerText = currentUser;
+    updateBalanceDisplay();
+    updateScoreTable();
+  }
+
+  function logout() {
+    currentUser = null;
+    document.getElementById("userPanel").classList.add("hidden");
+    document.getElementById("registerSection").classList.remove("hidden");
+    document.getElementById("loginSection").classList.remove("hidden");
+    document.getElementById("adminLogin").classList.remove("hidden");
+  }
+
+  function updateBalanceDisplay() {
+    if (!currentUser) return;
+    const bal = users[currentUser]?.balance || 0;
+    document.getElementById("balanceDisplay").innerText = bal + "$";
+  }
+
+  function redeemCode() {
+    const codeInput = document.getElementById("userCode").value.trim().toUpperCase();
+    const msg = document.getElementById("redeemMsg");
+    msg.style.color = "#7fff7f";
+    msg.innerText = "";
+
+    if (!codeInput) {
+      msg.style.color = "#ff6f61";
+      msg.innerText = "لطفا کد را وارد کنید";
+      return;
+    }
+    if (!codes[codeInput]) {
+      msg.style.color = "#ff6f61";
+      msg.innerText = "کد نامعتبر است یا قبلا استفاده شده";
+      return;
+    }
+    if (codes[codeInput].used) {
+      msg.style.color = "#ff6f61";
+      msg.innerText = "این کد قبلا استفاده شده است";
+      return;
+    }
+    const amount = codes[codeInput].amount || 0;
+    users[currentUser].balance += amount;
+    codes[codeInput].used = true;
+    saveData();
+    updateBalanceDisplay();
+    updateScoreTable();
+    msg.innerText = `با موفقیت ${amount}$ دریافت شد`;
+    document.getElementById("userCode").value = "";
+  }
+
+  function transferDollar() {
+    const toUser = document.getElementById("transferTo").value.trim();
+    const amount = parseInt(document.getElementById("transferAmount").value.trim());
+    const msg = document.getElementById("transferMsg");
+    msg.style.color = "#7fff7f";
+    msg.innerText = "";
+
+    if (!toUser || !amount || amount <= 0) {
+      msg.style.color = "#ff6f61";
+      msg.innerText = "نام کاربری گیرنده و مقدار معتبر را وارد کنید";
+      return;
+    }
+    if (!users[toUser]) {
+      msg.style.color = "#ff6f61";
+      msg.innerText = "کاربر گیرنده وجود ندارد";
+      return;
+    }
+    if (users[currentUser].balance < amount) {
