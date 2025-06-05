@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>سامانه ثبت‌نام و جوایز</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; background: #f3f3f3; }
+    input, button { margin: 6px; padding: 8px 12px; font-size: 16px; }
+    #output { margin-top: 20px; color: #333; font-weight: bold; }
+    table { margin: 20px auto; border-collapse: collapse; }
+    th, td { padding: 8px 12px; border: 1px solid #aaa; }
+    h2 { margin-top: 40px; }
+  </style>
+</head>
+<body>
+  <h1>🎉 سامانه ثبت‌نام و دریافت امتیاز</h1>
+
+  <h2>ثبت‌نام یا ورود</h2>
+  <input id="username" placeholder="نام کاربری">
+  <button onclick="login()">ورود</button>
+
+  <h2>وارد کردن کد</h2>
+  <input id="usercode" placeholder="کد جایزه">
+  <button onclick="useCode()">ثبت کد</button>
+
+  <h3>موجودی: <span id="balance">-</span> دلار</h3>
+
+  <h2>جدول امتیازات</h2>
+  <table>
+    <thead>
+      <tr><th>کاربر</th><th>موجودی ($)</th></tr>
+    </thead>
+    <tbody id="scoreboard"></tbody>
+  </table>
+
+  <h2>پنل مدیریت</h2>
+  <input id="adminpass" placeholder="رمز مدیریت">
+  <input id="newcode" placeholder="کد جدید">
+  <input id="amount" type="number" placeholder="مقدار دلار">
+  <button onclick="addCode()">افزودن کد</button><br>
+  <input id="banuser" placeholder="نام کاربر برای بن">
+  <button onclick="ban()">بن کردن</button>
+
+  <div id="output"></div>
+
+  <script>
+    const adminPassword = "admin123"; // رمز مدیریت
+
+    const users = JSON.parse(localStorage.getItem("users") || "{}");
+    const codes = JSON.parse(localStorage.getItem("codes") || "[]");
+    const banned = JSON.parse(localStorage.getItem("banned") || "[]");
+    let currentUser = "";
+
+    function save() {
+      localStorage.setItem("users", JSON.stringify(users));
+      localStorage.setItem("codes", JSON.stringify(codes));
+      localStorage.setItem("banned", JSON.stringify(banned));
+    }
+
+    function showMessage(msg) {
+      document.getElementById("output").innerText = msg;
+      updateBoard();
+    }
+
+    function login() {
+      const user = document.getElementById("username").value.trim();
+      if (banned.includes(user)) return showMessage("شما بن شده‌اید.");
+      if (!users[user]) users[user] = 0;
+      currentUser = user;
+      save();
+      showMessage(`خوش آمدی ${user}`);
+      updateBalance();
+      updateBoard();
+    }
+
+    function useCode() {
+      if (!currentUser) return showMessage("لطفاً ابتدا وارد شوید.");
+      const code = document.getElementById("usercode").value.trim();
+      const item = codes.find(c => c.code === code);
+      if (!item) return showMessage("کد نامعتبر است.");
+      users[currentUser] += item.amount;
+      codes.splice(codes.indexOf(item), 1);
+      save();
+      showMessage(`🎁 ${item.amount}$ به حساب شما اضافه شد!`);
+      updateBalance();
+    }
+
+    function updateBalance() {
+      document.getElementById("balance").innerText = users[currentUser] || 0;
+    }
+
+    function updateBoard() {
+      const board = document.getElementById("scoreboard");
+      board.innerHTML = "";
+      const sorted = Object.entries(users).sort((a,b) => b[1] - a[1]);
+      for (const [user, score] of sorted) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${user}</td><td>${score}</td>`;
+        board.appendChild(tr);
+      }
+    }
+
+    function addCode() {
+      const pass = document.getElementById("adminpass").value;
+      const newcode = document.getElementById("newcode").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
+      if (pass !== adminPassword) return showMessage("رمز اشتباه است.");
+      if (!newcode || isNaN(amount)) return showMessage("مقدار معتبر وارد کنید.");
+      codes.push({ code: newcode, amount });
+      save();
+      showMessage(`کد "${newcode}" با مبلغ ${amount}$ اضافه شد.`);
+    }
+
+    function ban() {
+      const pass = document.getElementById("adminpass").value;
+      if (pass !== adminPassword) return showMessage("رمز اشتباه است.");
+      const user = document.getElementById("banuser").value.trim();
+      if (!user) return showMessage("نام کاربری وارد نشده.");
+      if (!banned.includes(user)) banned.push(user);
+      save();
+      showMessage(`کاربر ${user} بن شد.`);
+    }
+
+    updateBoard(); // Load scoreboard on page load
+  </script>
+</body>
+</html>
