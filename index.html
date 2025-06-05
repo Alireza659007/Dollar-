@@ -1,0 +1,187 @@
+<!DOCTYPE html><html lang="fa">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>سایت دلار</title>
+  <style>
+    body {
+      font-family: Tahoma;
+      background: linear-gradient(135deg, #006400, #800080);
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    section {
+      margin: 20px auto;
+      padding: 20px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+    }
+    input, button {
+      margin: 8px 0;
+      padding: 10px;
+      width: 90%;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+    }
+    input {
+      background-color: #333;
+      color: #fff;
+    }
+    button {
+      background-color: #32CD32;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #228B22;
+    }
+    .hidden { display: none; }
+    table { width: 100%; color: #fff; }
+    th, td { padding: 8px; border-bottom: 1px solid #fff; }
+  </style>
+</head>
+<body>
+  <section id="register">
+    <h2>ثبت‌نام</h2>
+    <input id="regUsername" placeholder="نام کاربری" />
+    <input id="regPassword" type="password" placeholder="رمز عبور" />
+    <button onclick="register()">ثبت‌نام</button>
+    <p id="regMsg"></p>
+  </section>  <section id="login">
+    <h2>ورود</h2>
+    <input id="loginUsername" placeholder="نام کاربری" />
+    <input id="loginPassword" type="password" placeholder="رمز عبور" />
+    <button onclick="login()">ورود</button>
+    <p id="loginMsg"></p>
+  </section>  <section id="userPanel" class="hidden">
+    <h3>خوش آمدی <span id="currentUser"></span></h3>
+    <p>موجودی: <span id="balance"></span> $</p>
+    <input id="codeInput" placeholder="کد را وارد کنید" />
+    <button onclick="redeemCode()">دریافت دلار</button>
+    <p id="redeemMsg"></p>
+    <button onclick="logout()">خروج</button>
+  </section>  <section id="adminLogin">
+    <h2>ورود مدیر</h2>
+    <input id="adminPass" type="password" placeholder="رمز مدیر" />
+    <button onclick="adminLogin()">ورود</button>
+    <p id="adminMsg"></p>
+  </section>  <section id="adminPanel" class="hidden">
+    <h3>پنل مدیریت</h3>
+    <input id="newCode" placeholder="کد جدید" />
+    <input id="codeAmount" type="number" placeholder="مقدار دلار" />
+    <button onclick="createCode()">ایجاد کد</button>
+    <p id="codeMsg"></p>
+    <button onclick="adminLogout()">خروج مدیر</button>
+  </section>  <section>
+    <h3>برترین کاربران</h3>
+    <table>
+      <thead><tr><th>رتبه</th><th>نام</th><th>دلار</th></tr></thead>
+      <tbody id="leaderboard"></tbody>
+    </table>
+  </section>  <script>
+    const ADMIN_PASSWORD = "admin123";
+    let users = JSON.parse(localStorage.getItem("users") || "{}");
+    let codes = JSON.parse(localStorage.getItem("codes") || "{}");
+    let currentUser = null;
+
+    function saveData() {
+      localStorage.setItem("users", JSON.stringify(users));
+      localStorage.setItem("codes", JSON.stringify(codes));
+    }
+
+    function register() {
+      const u = document.getElementById("regUsername").value.trim();
+      const p = document.getElementById("regPassword").value;
+      const msg = document.getElementById("regMsg");
+      if (!u || !p) return msg.innerText = "نام کاربری و رمز لازم است";
+      if (users[u]) return msg.innerText = "نام کاربری تکراری است";
+      users[u] = { password: p, balance: 0 };
+      saveData();
+      msg.innerText = "ثبت‌نام موفق بود";
+    }
+
+    function login() {
+      const u = document.getElementById("loginUsername").value.trim();
+      const p = document.getElementById("loginPassword").value;
+      const msg = document.getElementById("loginMsg");
+      if (!users[u] || users[u].password !== p) return msg.innerText = "ورود ناموفق";
+      currentUser = u;
+      showUserPanel();
+    }
+
+    function showUserPanel() {
+      document.getElementById("register").classList.add("hidden");
+      document.getElementById("login").classList.add("hidden");
+      document.getElementById("adminLogin").classList.add("hidden");
+      document.getElementById("userPanel").classList.remove("hidden");
+      document.getElementById("currentUser").innerText = currentUser;
+      document.getElementById("balance").innerText = users[currentUser].balance;
+      updateLeaderboard();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById("userPanel").classList.add("hidden");
+      document.getElementById("register").classList.remove("hidden");
+      document.getElementById("login").classList.remove("hidden");
+      document.getElementById("adminLogin").classList.remove("hidden");
+    }
+
+    function redeemCode() {
+      const code = document.getElementById("codeInput").value.trim();
+      const msg = document.getElementById("redeemMsg");
+      if (!codes[code] || codes[code].used) return msg.innerText = "کد نامعتبر یا استفاده شده است";
+      users[currentUser].balance += codes[code].amount;
+      codes[code].used = true;
+      saveData();
+      msg.innerText = `کد با موفقیت استفاده شد (${codes[code].amount}$)`;
+      document.getElementById("balance").innerText = users[currentUser].balance;
+      updateLeaderboard();
+    }
+
+    function adminLogin() {
+      const pass = document.getElementById("adminPass").value;
+      const msg = document.getElementById("adminMsg");
+      if (pass !== ADMIN_PASSWORD) return msg.innerText = "رمز اشتباه است";
+      document.getElementById("adminLogin").classList.add("hidden");
+      document.getElementById("adminPanel").classList.remove("hidden");
+    }
+
+    function adminLogout() {
+      document.getElementById("adminPanel").classList.add("hidden");
+      document.getElementById("adminLogin").classList.remove("hidden");
+    }
+
+    function createCode() {
+      const code = document.getElementById("newCode").value.trim();
+      const amount = parseInt(document.getElementById("codeAmount").value);
+      const msg = document.getElementById("codeMsg");
+      if (!code || !amount || amount <= 0) return msg.innerText = "مقدار معتبر وارد کنید";
+      codes[code] = { amount, used: false };
+      saveData();
+      msg.innerText = `کد ساخته شد: ${code} (${amount}$)`;
+    }
+
+    function updateLeaderboard() {
+      const table = document.getElementById("leaderboard");
+      table.innerHTML = "";
+      Object.keys(users).sort((a, b) => users[b].balance - users[a].balance).slice(0, 10).forEach((u, i) => {
+        table.innerHTML += `<tr><td>${i+1}</td><td>${u}</td><td>${users[u].balance}$</td></tr>`;
+      });
+    }
+
+    // بارگزاری اولیه در صورت ورود قبلی
+    if (localStorage.getItem("loggedInUser")) {
+      const u = localStorage.getItem("loggedInUser");
+      if (users[u]) {
+        currentUser = u;
+        showUserPanel();
+      }
+    }
+  </script></body>
+</html>
