@@ -1,0 +1,168 @@
+<!DOCTYPE html><html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کیف پول جهانی</title>
+  <style>
+    body {
+      font-family: 'Tahoma', sans-serif;
+      background: linear-gradient(135deg, #ffe6f0, #ffffff);
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    input, button {
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background: #ff80b3;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+    .user-card {
+      background: #fff0f5;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="login">
+    <h2>ورود به کیف پول</h2>
+    <input type="text" id="username" placeholder="نام کاربری">
+    <input type="password" id="password" placeholder="رمز عبور">
+    <button onclick="login()">ورود</button>
+  </div>  <div class="container hidden" id="wallet">
+    <h2>کیف پول <span id="userLabel"></span></h2>
+    <p>موجودی: $<span id="balance">0</span></p><div id="adminPanel" class="hidden">
+  <h3>پنل ادمین</h3>
+  <input type="text" id="targetUser" placeholder="نام کاربری هدف">
+  <input type="number" id="amountToAdd" placeholder="افزودن دلار">
+  <button onclick="addFunds()">افزودن</button>
+</div>
+
+<h3>انجام شرط</h3>
+<input type="number" id="betAmount" placeholder="مقدار دلار برای شرط">
+<button onclick="placeBet()">شرط بندی</button>
+
+<h3>تراکنش‌ها</h3>
+<div id="transactions"></div>
+
+<h3>جدول امتیازات</h3>
+<div id="leaderboard"></div>
+
+<button onclick="logout()">خروج</button>
+
+  </div>  <script>
+    let users = JSON.parse(localStorage.getItem('users') || '{}');
+    let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+    let currentUser = null;
+
+    function saveAll() {
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('transactions', JSON.stringify(transactions));
+    }
+
+    function login() {
+      const user = document.getElementById('username').value;
+      const pass = document.getElementById('password').value;
+
+      if (user === 'admin' && pass === 'Alireza6590') {
+        currentUser = 'admin';
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('wallet').classList.remove('hidden');
+        document.getElementById('userLabel').innerText = 'ادمین';
+        document.getElementById('adminPanel').classList.remove('hidden');
+        updateView();
+        return;
+      }
+
+      if (!users[user]) {
+        users[user] = { balance: 0 };
+        saveAll();
+      }
+
+      currentUser = user;
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('wallet').classList.remove('hidden');
+      document.getElementById('userLabel').innerText = user;
+      updateView();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('login').classList.remove('hidden');
+      document.getElementById('wallet').classList.add('hidden');
+    }
+
+    function addFunds() {
+      const target = document.getElementById('targetUser').value;
+      const amount = parseFloat(document.getElementById('amountToAdd').value);
+      if (!users[target]) users[target] = { balance: 0 };
+      users[target].balance += amount;
+      transactions.push({ user: target, type: 'شارژ ادمین', amount, time: new Date().toLocaleString() });
+      saveAll();
+      updateView();
+      alert(`به ${target} مقدار $${amount} اضافه شد.`);
+    }
+
+    function placeBet() {
+      const amount = parseFloat(document.getElementById('betAmount').value);
+      if (amount > 0 && users[currentUser].balance >= amount) {
+        users[currentUser].balance -= amount;
+        transactions.push({ user: currentUser, type: 'شرط', amount: -amount, time: new Date().toLocaleString() });
+        saveAll();
+        updateView();
+        alert(`شرط شما ثبت شد و $${amount} از حساب کم شد.`);
+      } else {
+        alert('موجودی کافی نیست یا مقدار نامعتبر است.');
+      }
+    }
+
+    function updateView() {
+      document.getElementById('balance').innerText = users[currentUser].balance;
+      updateLeaderboard();
+      updateTransactions();
+    }
+
+    function updateLeaderboard() {
+      const board = document.getElementById('leaderboard');
+      board.innerHTML = '';
+      const sorted = Object.entries(users).sort((a, b) => b[1].balance - a[1].balance);
+      sorted.forEach(([name, data]) => {
+        const div = document.createElement('div');
+        div.className = 'user-card';
+        div.innerText = `${name} - $${data.balance}`;
+        board.appendChild(div);
+      });
+    }
+
+    function updateTransactions() {
+      const trans = document.getElementById('transactions');
+      trans.innerHTML = '';
+      transactions.filter(t => t.user === currentUser).forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'user-card';
+        div.innerText = `${t.time} - ${t.type} : $${t.amount}`;
+        trans.appendChild(div);
+      });
+    }
+  </script></body>
+</html>
